@@ -1,4 +1,4 @@
-module Hasknoaa (someFunc) where
+module Hasknoaa where
 
 import Control.Lens
 import qualified Data.ByteString.Char8 as BSC
@@ -36,6 +36,3 @@ getForecastResponseFromApi url units = do
             SI -> "si"
   let reqOpts = W.defaults & W.header H.hContentType .~ [BSC.pack "application/ld+json"] & W.param (T.pack "units") .~ [T.pack u]
   W.getWith reqOpts url
-
-someFunc :: IO ()
-someFunc = putStrLn "someFunc"
