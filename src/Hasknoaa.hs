@@ -1,7 +1,10 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Hasknoaa where
 
 import qualified Control.Exception as E
 import Control.Lens
+import qualified Data.Aeson as A
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -10,12 +13,67 @@ import qualified Network.HTTP.Types.Header as H
 import qualified Network.Wreq as W
 import Numeric (showFFloat)
 
+data Point = Point
+  { pointId :: String, -- Ok
+    pointCounty :: String, -- Ok
+    pointCwa :: String, -- Ok
+    pointFireWeatherZone :: String, -- Ok
+    pointForecast :: String, -- Ok
+    pointForecastGridData :: String, -- Ok
+    pointForecastHourly :: String, -- Ok
+    pointForecastOffice :: String, -- Ok
+    pointForecastZone :: String, -- Ok
+    pointGridId :: String, -- Ok
+    pointGridX :: Int,
+    pointGridY :: Int,
+    pointRadarStation :: String, -- Ok
+    pointTimeZone :: String -- Ok
+  }
+  deriving (Show)
+
 data Units
   = -- | United States Customary units, such as Fahrenheit, miles per hour, etc.
     USC
   | -- | International System units and derivitives like Celsius, kilometers per hour, etc.
     SI
   deriving (Show)
+
+instance A.FromJSON Point where
+  parseJSON (A.Object v) = do
+    id <- v A..: "id"
+    props <- v A..: "properties"
+    county <- props A..: "county"
+    cwa <- props A..: "cwa"
+    fireWeatherZone <- props A..: "fireWeatherZone"
+    forecast <- props A..: "forecast"
+    forecastGridData <- props A..: "forecastGridData"
+    forecastHourly <- props A..: "forecastHourly"
+    forecastOffice <- props A..: "forecastOffice"
+    forecastZone <- props A..: "forecastZone"
+    gridId <- props A..: "gridId"
+    gridX <- props A..: "gridX"
+    gridY <- props A..: "gridY"
+    radarStation <- props A..: "radarStation"
+    timeZone <- props A..: "timeZone"
+    pure $
+      Point
+        id
+        county
+        cwa
+        fireWeatherZone
+        forecast
+        forecastGridData
+        forecastHourly
+        forecastOffice
+        forecastZone
+        gridId
+        gridX
+        gridY
+        radarStation
+        timeZone
+
+decodePoint :: BSL.ByteString -> Maybe Point
+decodePoint = A.decode
 
 safeGetWith ::
   W.Options ->
