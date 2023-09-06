@@ -8,6 +8,9 @@ import qualified Data.Aeson as A
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
+import Data.Time.Clock (UTCTime)
+import qualified Data.Time.Format.ISO8601 as DTFI
+import qualified Data.Time.LocalTime as DTL
 import qualified Network.HTTP.Client as C
 import qualified Network.HTTP.Types.Header as H
 import qualified Network.Wreq as W
@@ -30,6 +33,22 @@ data Point = Point
     pointTimeZone :: String -- Ok
   }
   deriving (Show)
+
+data Period = Period
+  { periodNumber :: Int,
+    periodStartTime :: Maybe UTCTime,
+    periodEndTime :: Maybe UTCTime,
+    periodTemperature :: Int,
+    periodTemperatureUnit :: String,
+    periodWindSpeed :: String,
+    periodWindDirection :: String,
+    periodIcon :: String,
+    periodShortForecast :: String,
+    periodDetailedForecast :: String
+  }
+  deriving (Show)
+
+data Forecast = Forecast {forecastPeriods :: [Period]} deriving (Show)
 
 data Units
   = -- | United States Customary units, such as Fahrenheit, miles per hour, etc.
@@ -72,8 +91,44 @@ instance A.FromJSON Point where
         radarStation
         timeZone
 
+instance A.FromJSON Period where
+  parseJSON = A.withObject "Period" $ \v -> do
+    number <- v A..: "number"
+    startTime <- v A..: "startTime"
+    endTime <- v A..: "endTime"
+    let startTime' = DTL.zonedTimeToUTC <$> DTFI.iso8601ParseM startTime
+    let endTime' = DTL.zonedTimeToUTC <$> DTFI.iso8601ParseM endTime
+    temperature <- v A..: "temperature"
+    temperatureUnit <- v A..: "temperatureUnit"
+    windSpeed <- v A..: "windSpeed"
+    windDirection <- v A..: "windDirection"
+    icon <- v A..: "icon"
+    shortForecast <- v A..: "shortForecast"
+    detailedForecast <- v A..: "detailedForecast"
+    pure $
+      Period
+        number
+        startTime'
+        endTime'
+        temperature
+        temperatureUnit
+        windSpeed
+        windDirection
+        icon
+        shortForecast
+        detailedForecast
+
+instance A.FromJSON Forecast where
+  parseJSON = A.withObject "Forecast" $ \v -> do
+    properties <- v A..: "properties"
+    periods <- properties A..: "periods"
+    pure $ Forecast periods
+
 decodePoint :: BSL.ByteString -> Maybe Point
 decodePoint = A.decode
+
+decodeForecast :: BSL.ByteString -> Maybe Forecast
+decodeForecast = A.decode
 
 safeGetWith ::
   W.Options ->
